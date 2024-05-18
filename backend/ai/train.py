@@ -122,6 +122,7 @@ for epoch in range(350):
         print("Early stopping")
         break
 
+torch.save(model.state_dict(), 'mouse_model.pth')
 
 plt.figure(figsize=(10, 5))
 plt.plot(train_losses, label='Training Loss')

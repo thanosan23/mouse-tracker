@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
-import MouseTracker from "../components/MouseTracker"
+import MouseTracker from "~/components/MouseTracker"
+import MousePredictor from "~/components/MousePredictor";
 
 export default function Home() {
   return (
@@ -11,7 +12,8 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="">
-        <MouseTracker />
+        {/* <MouseTracker /> */}
+        <MousePredictor />
       </main>
     </>
   );
