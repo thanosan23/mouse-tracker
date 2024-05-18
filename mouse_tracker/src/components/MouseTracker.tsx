@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 interface MouseData {
+  currentX: number;
+  currentY: number;
   dx: number;
   dy: number;
   dt: number;
@@ -23,17 +25,18 @@ const MouseTracker: React.FC = () => {
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       const currentTime = Date.now();
-      const dx = event.clientX - (lastMousePosition ? lastMousePosition.x : event.clientX);
-      const dy = event.clientY - (lastMousePosition ? lastMousePosition.y : event.clientY);
+      const currentX = event.clientX;
+      const currentY = event.clientY;
+      const dx = currentX - (lastMousePosition ? lastMousePosition.x : currentX);
+      const dy = currentY - (lastMousePosition ? lastMousePosition.y : currentY);
       const dt = lastMouseTime ? currentTime - lastMouseTime : 0;
       setMouseData((prevData) => [
         ...prevData,
-        { dx, dy, dt, d: 0, targetX: null, targetY: null },
+        { currentX, currentY, dx, dy, dt, d: 0, targetX: null, targetY: null },
       ]);
-      setLastMousePosition({ x: event.clientX, y: event.clientY });
+      setLastMousePosition({ x: currentX, y: currentY });
       setLastMouseTime(currentTime);
     };
-
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [lastMousePosition, lastMouseTime]);
@@ -71,10 +74,10 @@ const MouseTracker: React.FC = () => {
 
   const downloadCSV = () => {
     const csvContent =
-      'dx,dy,dt,d,targetX,targetY\n' +
+      'currentX,currentY,dx,dy,dt,d,targetX,targetY\n' +
       mouseData
         .filter((data) => data.targetX != null)
-        .map((data) => `${data.dx},${data.dy},${data.dt},${data.d},${data.targetX},${data.targetY}`)
+        .map((data) => `${data.currentX},${data.currentY},${data.dx},${data.dy},${data.dt},${data.d},${data.targetX},${data.targetY}`)
         .join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
