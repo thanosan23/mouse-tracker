@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 import matplotlib.pyplot as plt 
+import pickle
 
 class MouseDataset(Dataset):
     def __init__(self, csv_file, window_size=5):
@@ -17,6 +18,9 @@ class MouseDataset(Dataset):
         X = self.dataframe[['currentX', 'currentY', 'dx', 'dy', 'dt', 'd']].values
         X = self.scaler.fit_transform(X)
         self.X = torch.tensor(X, dtype=torch.float32)
+
+        with open('scaler.pkl', 'wb') as f:
+            pickle.dump(self.scaler, f)
         
         y = self.dataframe[['targetX', 'targetY']].values
         self.y = torch.tensor(y, dtype=torch.float32)
@@ -61,7 +65,7 @@ test_loader = DataLoader(test_set, batch_size=64, shuffle=False)
 
 model = MouseModel(input_size=input_size)
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-5)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.5)
 
 class EarlyStopping:
@@ -83,7 +87,7 @@ class EarlyStopping:
             self.best_loss = val_loss
             self.counter = 0
 
-early_stopping = EarlyStopping(patience=10, min_delta=0.01)
+early_stopping = EarlyStopping(patience=20, min_delta=0.01)
 
 train_losses = []
 test_losses = []

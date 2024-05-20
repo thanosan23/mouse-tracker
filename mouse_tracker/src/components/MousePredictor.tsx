@@ -69,7 +69,8 @@ const MousePredictor: React.FC = () => {
         <div>
             {predictedPosition && (
                 <div>
-                Hello World
+                    {predictedPosition.x}
+                    {predictedPosition.y}
                 <div
                     style={{
                         position: 'absolute',
