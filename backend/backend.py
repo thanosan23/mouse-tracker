@@ -5,32 +5,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 import pickle
-
-class MouseModel(nn.Module):
-    def __init__(self, input_size):
-        super(MouseModel, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_size, 512),
-            nn.ReLU(),
-            nn.BatchNorm1d(512),
-            nn.Dropout(0.5),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.BatchNorm1d(128),
-            nn.Dropout(0.5),
-            nn.Linear(128, 2)
-        )
-
-    def forward(self, x):
-        return self.network(x)
-
+from ai.model import MouseModel
 
 model = MouseModel(input_size=30)  # 5 windows * 6 features
-model.load_state_dict(torch.load('ai/mouse_model.pth'))
+model.load_state_dict(torch.load('./ai/mouse_model.pth'))
 model.eval()
 
 with open('ai/scaler.pkl', 'rb') as f:
@@ -50,7 +28,11 @@ async def predict(websocket, path):
     
     await websocket.send(json.dumps({'targetX': prediction[0], 'targetY': prediction[1]}))
 
-start_server = websockets.serve(predict, 'localhost', 8765)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+if __name__ == "__main__":
+    start_server = websockets.serve(predict, 'localhost', 8765)
+
+    print("[DEBUG] Backend starting...")
+
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
