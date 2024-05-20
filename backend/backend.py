@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS  # Import CORS module
+import asyncio
+import json
+import websockets
 import torch
 import torch.nn as nn
 import numpy as np
@@ -27,20 +28,17 @@ class MouseModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-app = Flask(__name__)
-CORS(app) 
 
 model = MouseModel(input_size=30)  # 5 windows * 6 features
 model.load_state_dict(torch.load('ai/mouse_model.pth'))
 model.eval()
 
-# Load the scaler
 with open('ai/scaler.pkl', 'rb') as f:
     scaler = pickle.load(f)
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.json
+async def predict(websocket, path):
+    data = await websocket.recv()
+    data = json.loads(data)
     features = np.array(data['features']).astype(np.float32)
     feat_shape = features.shape
     features = np.array(scaler.transform(features.reshape(-1, 6)))
@@ -48,8 +46,11 @@ def predict():
     features = torch.tensor(features).unsqueeze(0)
     
     with torch.no_grad():
-        prediction = model(torch.tensor(features)).numpy().flatten().tolist()
-    return jsonify({'targetX': prediction[0], 'targetY': prediction[1]})
+        prediction = model(features.clone().detach()).numpy().flatten().tolist()
+    
+    await websocket.send(json.dumps({'targetX': prediction[0], 'targetY': prediction[1]}))
 
-if __name__ == '__main__':
-    app.run(debug=True)
+start_server = websockets.serve(predict, 'localhost', 8765)
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()

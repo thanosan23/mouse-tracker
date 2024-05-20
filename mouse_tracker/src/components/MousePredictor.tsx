@@ -13,7 +13,6 @@ const MousePredictor: React.FC = () => {
     const [mouseData, setMouseData] = useState<MousePredictData[]>([]);
     const [lastMousePosition, setLastMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [lastMouseTime, setLastMouseTime] = useState<number | null>(null);
-    const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [predictedPosition, setPredictedPosition] = useState<{ x: number; y: number } | null>(null);
 
     useEffect(() => {
@@ -36,9 +35,9 @@ const MousePredictor: React.FC = () => {
     }, [lastMousePosition, lastMouseTime]);
 
     useEffect(() => {
-        if (mouseData.length > 0) {
+        if (mouseData.length > 5) {
             const lastData = mouseData[mouseData.length - 1];
-            if (lastData && lastData.dt >= 500) {
+            if (lastData) {
                 fetchPrediction();
             }
         }
@@ -53,36 +52,40 @@ const MousePredictor: React.FC = () => {
             dt: data.dt,
             d: data.d,
         }));
-        const response = await fetch('http://127.0.0.1:5000/predict', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ features: recentData.flatMap(data => [data.currentX, data.currentY, data.dx, data.dy, data.dt, data.d]) }),
-        });
-        const prediction = await response.json();
-        console.log(prediction)
-        setPredictedPosition({ x: prediction.targetX, y: prediction.targetY });
+
+       const ws = new WebSocket('ws://localhost:8765/predict');
+        ws.onopen = () => {
+            ws.send(
+                JSON.stringify({ features: recentData.flatMap(data => [data.currentX, data.currentY, data.dx, data.dy, data.dt, data.d])})
+            );
+        };
+        ws.onmessage = (event) => {
+            const prediction = JSON.parse(event.data);
+            setPredictedPosition({ x: prediction.targetX, y: prediction.targetY });
+            ws.close();
+        };
     };
 
     return (
         <div>
             {predictedPosition && (
                 <div>
-                    {predictedPosition.x}
-                    {predictedPosition.y}
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: `${predictedPosition.x}px`,
-                        top: `${predictedPosition.y}px`,
-                        width: '5px',
-                        height: '5px',
-                        backgroundColor: 'rgba(255, 0, 0, 0.5)',
-                        border: '2px solid red',
-                        borderRadius: '10%',
-                    }}
-                />
+                    <div className="text-xs">
+                        <p>Debug</p>
+                        <p>Predicted: {predictedPosition.x} {predictedPosition.y}</p>
+                    </div>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: `${predictedPosition.x}px`,
+                            top: `${predictedPosition.y}px`,
+                            width: '5px',
+                            height: '5px',
+                            backgroundColor: 'rgba(255, 0, 0, 0.5)',
+                            border: '2px solid red',
+                            borderRadius: '10%',
+                        }}
+                    />
                 </div>
             )}
         </div>
