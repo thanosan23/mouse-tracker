@@ -1,19 +1,19 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-import pandas as pd
-from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler
-import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+import pandas as pd
 import pickle
+
 from model import MouseModel
 
 class MouseDataset(Dataset):
     def __init__(self, csv_file, window_size=5):
         self.dataframe = pd.read_csv(csv_file)
         self.scaler = StandardScaler()
+        self.output_scaler = StandardScaler()
         self.window_size = window_size
 
         X = self.dataframe[['currentX', 'currentY', 'dx', 'dy', 'dt', 'd']].values
@@ -22,9 +22,13 @@ class MouseDataset(Dataset):
 
         with open('scaler.pkl', 'wb') as f:
             pickle.dump(self.scaler, f)
-        
+
         y = self.dataframe[['targetX', 'targetY']].values
+        y = self.output_scaler.fit_transform(y)
         self.y = torch.tensor(y, dtype=torch.float32)
+
+        with open('output_scaler.pkl', 'wb') as f:
+            pickle.dump(self.output_scaler, f)
 
     def __len__(self):
         return len(self.dataframe) - self.window_size + 1
@@ -34,17 +38,18 @@ class MouseDataset(Dataset):
         y_target = self.y[idx + self.window_size - 1]
         return X_window, y_target
 
-
 window_size = 5
 input_size = window_size * 6
 
 dataset = MouseDataset('Mouse Data.csv', window_size=window_size)
-train_set, test_set = train_test_split(dataset, test_size=0.2, random_state=42)
+train_size = int(0.8 * len(dataset))
+test_size = len(dataset) - train_size
+train_set, test_set = random_split(dataset, [train_size, test_size])
 train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=64, shuffle=False)
 
 model = MouseModel(input_size=input_size)
-criterion = nn.MSELoss()
+criterion = nn.L1Loss()
 optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-5)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.5)
 
@@ -67,20 +72,20 @@ class EarlyStopping:
             self.best_loss = val_loss
             self.counter = 0
 
-early_stopping = EarlyStopping(patience=20, min_delta=0.01)
+early_stopping = EarlyStopping(patience=20)
 
 train_losses = []
 test_losses = []
 
 def train(epoch, model, train_loader, criterion, optimizer):
     model.train()
+    loss = torch.tensor(0)
     for batch_idx, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        
         if batch_idx % 10 == 0:
             print(f'Epoch: {epoch} | Batch: {batch_idx} | Loss: {loss.item():.6f}')
     train_losses.append(loss.item())

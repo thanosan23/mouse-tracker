@@ -2,7 +2,6 @@ import asyncio
 import json
 import websockets
 import torch
-import torch.nn as nn
 import numpy as np
 import pickle
 from ai.model import MouseModel
@@ -14,18 +13,22 @@ model.eval()
 with open('ai/scaler.pkl', 'rb') as f:
     scaler = pickle.load(f)
 
-async def predict(websocket, path):
+with open('ai/output_scaler.pkl', 'rb') as f:
+    output_scaler = pickle.load(f)
+
+async def predict(websocket):
     data = await websocket.recv()
     data = json.loads(data)
     features = np.array(data['features']).astype(np.float32)
+    old_features = features
     feat_shape = features.shape
     features = np.array(scaler.transform(features.reshape(-1, 6)))
     features = features.reshape(feat_shape)
     features = torch.tensor(features).unsqueeze(0)
-    
     with torch.no_grad():
-        prediction = model(features.clone().detach()).numpy().flatten().tolist()
-    
+        prediction = model(features.clone().detach()).numpy()
+        prediction = output_scaler.inverse_transform(prediction).flatten().tolist()
+    print(f"[DEBUG] Prediction: {prediction} | Coordinates: {old_features.reshape(5, -1).tolist()}")
     await websocket.send(json.dumps({'targetX': prediction[0], 'targetY': prediction[1]}))
 
 
