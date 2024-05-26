@@ -5,8 +5,9 @@ import torch
 import numpy as np
 import pickle
 from ai.model import MouseModel
+from config import Config
 
-model = MouseModel(input_size=30)  # 5 windows * 6 features
+model = MouseModel(input_size=Config.INPUT_SIZE)
 model.load_state_dict(torch.load('./ai/mouse_model.pth'))
 model.eval()
 
@@ -22,7 +23,7 @@ async def predict(websocket):
     features = np.array(data['features']).astype(np.float32)
     old_features = features
     feat_shape = features.shape
-    features = np.array(scaler.transform(features.reshape(-1, 6)))
+    features = np.array(scaler.transform(features.reshape(-1, Config.FEATURE_SIZE)))
     features = features.reshape(feat_shape)
     features = torch.tensor(features).unsqueeze(0)
     with torch.no_grad():
@@ -32,10 +33,13 @@ async def predict(websocket):
     await websocket.send(json.dumps({'targetX': prediction[0], 'targetY': prediction[1]}))
 
 
-if __name__ == "__main__":
-    start_server = websockets.serve(predict, 'localhost', 8765)
+def main():
+    start_server = websockets.serve(predict, Config.HOST, Config.PORT)
 
     print("[DEBUG] Backend starting...")
 
     asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
+
+if __name__ == "__main__":
+    main()

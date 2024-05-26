@@ -2,18 +2,19 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, random_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MaxAbsScaler
 import matplotlib.pyplot as plt
 import pandas as pd
 import pickle
 
+from backend.config import Config
 from model import MouseModel
 
 class MouseDataset(Dataset):
-    def __init__(self, csv_file, window_size=5):
+    def __init__(self, csv_file, window_size):
         self.dataframe = pd.read_csv(csv_file)
-        self.scaler = StandardScaler()
-        self.output_scaler = StandardScaler()
+        self.scaler = MaxAbsScaler()
+        self.output_scaler = MaxAbsScaler()
         self.window_size = window_size
 
         X = self.dataframe[['currentX', 'currentY', 'dx', 'dy', 'dt', 'd']].values
@@ -38,20 +39,20 @@ class MouseDataset(Dataset):
         y_target = self.y[idx + self.window_size - 1]
         return X_window, y_target
 
-window_size = 5
-input_size = window_size * 6
+window_size = Config.WINDOW_SIZE
+input_size = Config.INPUT_SIZE
 
 dataset = MouseDataset('Mouse Data.csv', window_size=window_size)
-train_size = int(0.8 * len(dataset))
+train_size = int(Config.TRAIN_SIZE * len(dataset))
 test_size = len(dataset) - train_size
 train_set, test_set = random_split(dataset, [train_size, test_size])
-train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_set, batch_size=64, shuffle=False)
+train_loader = DataLoader(train_set, batch_size=Config.BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(test_set, batch_size=Config.BATCH_SIZE, shuffle=False)
 
 model = MouseModel(input_size=input_size)
 criterion = nn.L1Loss()
-optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-5)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.5)
+optimizer = optim.Adam(model.parameters(), lr=Config.LEARNING_RATE, weight_decay=Config.WEIGHT_DECAY)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=Config.SCHEDULER_PATIENCE, factor=0.5)
 
 class EarlyStopping:
     def __init__(self, patience=10, min_delta=0):
@@ -72,7 +73,7 @@ class EarlyStopping:
             self.best_loss = val_loss
             self.counter = 0
 
-early_stopping = EarlyStopping(patience=20)
+early_stopping = EarlyStopping(patience=Config.EARLY_STOPPING_PATIENCE)
 
 train_losses = []
 test_losses = []
@@ -102,7 +103,7 @@ def evaluate(model, test_loader, criterion):
     test_losses.append(test_loss)
     return test_loss
 
-for epoch in range(350):
+for epoch in range(Config.EPOCHS):
     train(epoch, model, train_loader, criterion, optimizer)
     test_loss = evaluate(model, test_loader, criterion)
     scheduler.step(test_loss)
