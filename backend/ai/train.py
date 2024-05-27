@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pickle
 
-from ai.config import Config
+from config import Config
 from model import MouseModel
 
 device = torch.device('cpu')

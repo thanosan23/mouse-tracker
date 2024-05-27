@@ -9,6 +9,9 @@ interface MousePredictData {
 }
 
 const DEBUG = false;
+const HOST = 'localhost';
+const PORT = 8765;
+const WINDOW_SIZE = 10;
 
 const MousePredictor: React.FC = () => {
     const [mouseData, setMouseData] = useState<MousePredictData[]>([]);
@@ -36,7 +39,7 @@ const MousePredictor: React.FC = () => {
     }, [lastMousePosition, lastMouseTime]);
 
     useEffect(() => {
-        if (mouseData.length > 5) {
+        if (mouseData.length > WINDOW_SIZE) {
             const lastData = mouseData[mouseData.length - 1];
             if (lastData) {
                 fetchPrediction();
@@ -45,7 +48,7 @@ const MousePredictor: React.FC = () => {
     }, [mouseData]);
 
     const fetchPrediction = async () => {
-        const recentData = mouseData.slice(-5).map(data => ({
+        const recentData = mouseData.slice(-WINDOW_SIZE).map(data => ({
             currentX: data.currentX,
             currentY: data.currentY,
             dx: data.dx,
@@ -53,12 +56,14 @@ const MousePredictor: React.FC = () => {
             dt: data.dt,
         }));
 
-       const ws = new WebSocket('ws://localhost:8765/predict');
+        const ws = new WebSocket(`ws://${HOST}:${PORT}/predict`);
+
         ws.onopen = () => {
             ws.send(
                 JSON.stringify({ features: recentData.flatMap(data => [data.currentX, data.currentY, data.dx, data.dy, data.dt] )})
             );
         };
+
         ws.onmessage = (event) => {
             const prediction = JSON.parse(event.data);
             setPredictedPosition({ x: prediction.targetX, y: prediction.targetY });
