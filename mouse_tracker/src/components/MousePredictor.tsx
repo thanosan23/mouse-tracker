@@ -6,8 +6,9 @@ interface MousePredictData {
     dx: number;
     dy: number;
     dt: number;
-    d: number;
 }
+
+const DEBUG = false;
 
 const MousePredictor: React.FC = () => {
     const [mouseData, setMouseData] = useState<MousePredictData[]>([]);
@@ -25,7 +26,7 @@ const MousePredictor: React.FC = () => {
             const dt = lastMouseTime ? currentTime - lastMouseTime : 0;
             setMouseData((prevData) => [
                 ...prevData,
-                { currentX, currentY, dx, dy, dt, d: 0 },
+                { currentX, currentY, dx, dy, dt },
             ]);
             setLastMousePosition({ x: currentX, y: currentY });
             setLastMouseTime(currentTime);
@@ -50,13 +51,12 @@ const MousePredictor: React.FC = () => {
             dx: data.dx,
             dy: data.dy,
             dt: data.dt,
-            d: data.d,
         }));
 
        const ws = new WebSocket('ws://localhost:8765/predict');
         ws.onopen = () => {
             ws.send(
-                JSON.stringify({ features: recentData.flatMap(data => [data.currentX, data.currentY, data.dx, data.dy, data.dt, data.d])})
+                JSON.stringify({ features: recentData.flatMap(data => [data.currentX, data.currentY, data.dx, data.dy, data.dt] )})
             );
         };
         ws.onmessage = (event) => {
@@ -70,17 +70,19 @@ const MousePredictor: React.FC = () => {
         <div>
             {predictedPosition && (
                 <div>
-                    <div className="text-xs">
-                        <p>Debug</p>
-                        <p>Predicted: {predictedPosition.x} {predictedPosition.y}</p>
-                    </div>
+                    { DEBUG && (
+                        <div className="text-xs">
+                            <p>Debug</p>
+                            <p>Predicted: {predictedPosition.x} {predictedPosition.y}</p>
+                        </div>
+                    ) }
                     <div
                         style={{
                             position: 'absolute',
                             left: `${predictedPosition.x}px`,
                             top: `${predictedPosition.y}px`,
-                            width: '5px',
-                            height: '5px',
+                            width: '10px',
+                            height: '10px',
                             backgroundColor: 'rgba(255, 0, 0, 0.5)',
                             border: '2px solid red',
                             borderRadius: '10%',

@@ -4,8 +4,9 @@ import websockets
 import torch
 import numpy as np
 import pickle
+
+from ai.config import Config
 from ai.model import MouseModel
-from config import Config
 
 model = MouseModel(input_size=Config.INPUT_SIZE)
 model.load_state_dict(torch.load('./ai/mouse_model.pth'))

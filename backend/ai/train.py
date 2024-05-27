@@ -2,22 +2,24 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, random_split
-from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import pandas as pd
 import pickle
 
-from backend.config import Config
+from ai.config import Config
 from model import MouseModel
+
+device = torch.device('cpu')
 
 class MouseDataset(Dataset):
     def __init__(self, csv_file, window_size):
         self.dataframe = pd.read_csv(csv_file)
-        self.scaler = MaxAbsScaler()
-        self.output_scaler = MaxAbsScaler()
+        self.scaler = MinMaxScaler()
+        self.output_scaler = MinMaxScaler()
         self.window_size = window_size
 
-        X = self.dataframe[['currentX', 'currentY', 'dx', 'dy', 'dt', 'd']].values
+        X = self.dataframe[['currentX', 'currentY', 'dx', 'dy', 'dt']].values
         X = self.scaler.fit_transform(X)
         self.X = torch.tensor(X, dtype=torch.float32)
 
@@ -50,6 +52,7 @@ train_loader = DataLoader(train_set, batch_size=Config.BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_set, batch_size=Config.BATCH_SIZE, shuffle=False)
 
 model = MouseModel(input_size=input_size)
+model = model.to(device)
 criterion = nn.L1Loss()
 optimizer = optim.Adam(model.parameters(), lr=Config.LEARNING_RATE, weight_decay=Config.WEIGHT_DECAY)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=Config.SCHEDULER_PATIENCE, factor=0.5)
@@ -83,6 +86,8 @@ def train(epoch, model, train_loader, criterion, optimizer):
     loss = torch.tensor(0)
     for batch_idx, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
+        data = data.to(device)
+        target = target.to(device)
         output = model(data)
         loss = criterion(output, target)
         loss.backward()
@@ -96,6 +101,8 @@ def evaluate(model, test_loader, criterion):
     test_loss = 0
     with torch.no_grad():
         for data, target in test_loader:
+            data = data.to(device)
+            target = target.to(device)
             output = model(data)
             test_loss += criterion(output, target).item()
     test_loss /= len(test_loader.dataset)
