@@ -20,3 +20,9 @@ You have now officially trained the model.
 
 ## Testing out your model
 Go to `mouse_tracker/src/pages/index.tsx` and set `TRAIN` to `false`. You can then run `npm run dev` to run the page that predicts where your mouse will go.
+
+Make sure to also run the backend by running:
+```
+cd backend
+python3 backend.py
+```

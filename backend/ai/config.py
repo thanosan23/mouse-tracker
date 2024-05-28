@@ -17,3 +17,4 @@ class Config:
     # backend server
     HOST = 'localhost'
     PORT = 8765
+    DEBUG = True

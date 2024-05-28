@@ -44,7 +44,7 @@ class MouseDataset(Dataset):
 window_size = Config.WINDOW_SIZE
 input_size = Config.INPUT_SIZE
 
-dataset = MouseDataset('Mouse Data.csv', window_size=window_size)
+dataset = MouseDataset(Config.DATASET, window_size=window_size)
 train_size = int(Config.TRAIN_SIZE * len(dataset))
 test_size = len(dataset) - train_size
 train_set, test_set = random_split(dataset, [train_size, test_size])
