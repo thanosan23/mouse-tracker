@@ -2,6 +2,8 @@
 
 This project explores how non-deterministic assumptions can control interaction.
 
+This project specifically sees how mouse prediction can improve interaction.
+
 
 ## How to use the mouse tracker 
 ### Training the model
