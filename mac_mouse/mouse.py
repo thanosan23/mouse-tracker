@@ -1,4 +1,4 @@
-from Quartz.CoreGraphics import CGEventCreateMouseEvent, CGEventPost, kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseUp, kCGMouseButtonLeft, kCGHIDEventTap, CGEventCreate, CGEventGetLocation
+from pynput.mouse import Controller
 from time import sleep, time
 import asyncio
 import json
@@ -7,34 +7,18 @@ from websockets.exceptions import ConnectionClosedOK
 
 HOST = 'localhost'
 PORT = 8765
-WINDOW_SIZE = 10
+WINDOW_SIZE = 5
 DEBUG = False
 
 mouse_data = []
 last_mouse_position = None
 last_mouse_time = None
-
-class Mouse:
-    @staticmethod
-    def mouseEvent(type, posx, posy):
-        theEvent = CGEventCreateMouseEvent(None, type, (posx, posy), kCGMouseButtonLeft)
-        CGEventPost(kCGHIDEventTap, theEvent)
-
-    @staticmethod
-    def mousemove(posx, posy):
-        Mouse.mouseEvent(kCGEventMouseMoved, posx, posy)
-
-    @staticmethod
-    def mouseclick(posx, posy):
-        Mouse.mouseEvent(kCGEventLeftMouseDown, posx, posy)
-        Mouse.mouseEvent(kCGEventLeftMouseUp, posx, posy)
+mouse_controller = Controller()
 
 def capture_mouse_position():
     global last_mouse_position, last_mouse_time
-    event = CGEventCreate(None)
-    point = CGEventGetLocation(event)
     current_time = time()
-    currentX, currentY = point.x, point.y
+    currentX, currentY = mouse_controller.position
     dx = currentX - (last_mouse_position[0] if last_mouse_position else currentX)
     dy = currentY - (last_mouse_position[1] if last_mouse_position else currentY)
     dt = current_time - last_mouse_time if last_mouse_time else 0
@@ -57,8 +41,8 @@ async def send_mouse_data():
                         prediction = json.loads(response)
                         if DEBUG:
                             print(f"[DEBUG] Prediction: {prediction}")
-
-                        Mouse.mousemove(prediction['targetX'], prediction['targetY'])
+                        
+                        mouse_controller.position = (prediction['targetX'], prediction['targetY'])
 
                     await asyncio.sleep(0.1)  # Ensure the loop yields control
         except ConnectionClosedOK:
@@ -68,7 +52,7 @@ async def send_mouse_data():
 async def capture_mouse_positions_periodically():
     while True:
         capture_mouse_position()
-        await asyncio.sleep(0.00000001)  # Adjust the sleep time as needed
+        await asyncio.sleep(0.001)  # Adjust the sleep time as needed
 
 async def main():
     await asyncio.gather(

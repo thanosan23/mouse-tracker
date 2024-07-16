@@ -7,8 +7,9 @@ mouse_data = []
 last_mouse_position = None
 last_mouse_time = None
 last_target_position = (None, None)
-count_prev = 0
-count = 0
+mouse_positions = []
+last_index = 0
+indexes = []
 
 def on_move(x, y):
     global last_mouse_position, last_mouse_time, last_target_position, count
@@ -16,34 +17,36 @@ def on_move(x, y):
     dx = x - (last_mouse_position[0] if last_mouse_position else x)
     dy = y - (last_mouse_position[1] if last_mouse_position else y)
     dt = current_time - last_mouse_time if last_mouse_time else 0
-    mouse_data.append([x, y, dx, dy, dt, 0, last_target_position[0], last_target_position[1]])
-    count += 1
+    mouse_data.append([x, y, dx, dy, dt, 0, None, None])
     last_mouse_position = (x, y)
     last_mouse_time = current_time
 
 def on_click(x, y, button, pressed):
-    global last_target_position, count, count_prev
+    global last_target_position, count, count_prev, last_index
     if pressed:
         last_target_position = (x, y)
-        if mouse_data:
-            for data in mouse_data[-count:]:
-                count_prev = count
-                data[6] = last_target_position[0]
-                data[7] = last_target_position[1]
-                data[5] = ((x - data[0]) ** 2 + (y - data[1]) ** 2) ** 0.5
-                count = 0
+        mouse_positions.append(last_target_position)
+        indexes.append((last_index, len(mouse_data)))
+        last_index = len(mouse_data)
         if button == mouse.Button.right:
             save_to_csv()
             print("Mouse data saved to mouse_data.csv")
             return False
 
 def save_to_csv():
+    if mouse_data:
+        x = 0
+        for i, j in indexes:
+            for data in mouse_data[i:j]:
+                data[6] = mouse_positions[x][0]
+                data[7] = mouse_positions[x][1]
+            x += 1
     with open('Mouse Data.csv', 'w', newline='') as csvfile:
         fieldnames = ['currentX', 'currentY', 'dx', 'dy', 'dt', 'd', 'targetX', 'targetY']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for data in mouse_data:
-            if data[6] == '' or data[6] == None:
+            if data[6] == None or data[7] == None:
                 continue
             writer.writerow({
                 'currentX': data[0],

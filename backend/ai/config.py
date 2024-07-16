@@ -1,6 +1,6 @@
 class Config:
     # data
-    WINDOW_SIZE = 10
+    WINDOW_SIZE = 5
     FEATURE_SIZE = 5
     INPUT_SIZE = WINDOW_SIZE * FEATURE_SIZE
     DATASET = 'Mouse Data.csv'
